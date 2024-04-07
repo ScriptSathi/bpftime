@@ -1,0 +1,47 @@
+name: Build and test runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["*"]
+  pull_request: 
+    branches: ['master']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-bpftrace-and-test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        container:
+          - ubuntu-2204
+          - fedora-39
+
+    container:
+      image: "manjusakalza/bpftime-base-image:${{matrix.container}}"
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Install bpftrace
+        run: |
+          if [ "${{ matrix.container }}" = "ubuntu-2204" ]; then
+            sudo apt-get update && sudo apt-get install -y bpftrace
+          elif [ "${{ matrix.container }}" = "fedora-39" ]; then
+            sudo dnf install -y bpftrace
+          else
+            echo "Unsupported container type"
+            exit 1
+          fi
+
+      - name: Run bpftrace commands
+        shell: bash
+        run: |
+          sudo ~/.bpftime/bpftime load bpftrace -e 'uretprobe:/bin/bash:readline { printf("%-6d %s\n", pid, str(retval)); }' &
+          sudo ~/.bpftime/bpftime start /bin/bash
