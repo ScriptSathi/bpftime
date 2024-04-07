@@ -1,6 +1,7 @@
 add_executable(
     bpftime-cli-cpp
     main.cpp
+    command.cpp
 )
 
 set_target_properties(bpftime-cli-cpp PROPERTIES OUTPUT_NAME "bpftime")
